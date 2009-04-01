@@ -7,6 +7,9 @@ import subprocess
 from operator import itemgetter
 
 CACHE_FILE = os.getenv('HOME')+'/.launch'
+DMENU = "dmenu"
+TERM = "urxvt -hold -e "
+
 
 def create_cache():
     prog_list = commands.getoutput("dmenu_path").split("\n")
@@ -41,21 +44,30 @@ def update():
 
     store(cache_new,CACHE_FILE)
 
+def dmenu(pgm_list):
+    p = subprocess.Popen([DMENU], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+    out = p.communicate("\n".join(pgm_list))[0]
+    return out
+
+
 def run():
     cache = retrieve(CACHE_FILE,create_new)
     sorted_list = sorted(cache.iteritems(), key=itemgetter(1), reverse=True)
     pgm_list = [ x[0] for x in sorted_list ]
-    p = subprocess.Popen(["dmenu"], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-    out = p.communicate("\n".join(pgm_list))[0]
+    out = dmenu(pgm_list)
     if len(out) > 0 :
-        print out 
-        print cache[out]
-        cache[out] += 1
-        os.system(out + "&")
-        store(cache,CACHE_FILE)
+        if out == "update_dmen":
+            update()
+        elif out[-1] == ';':
+            out = out[:-1]
+            cache[out] += 1
+            os.system(TERM + out + "&")
+            store(cache,CACHE_FILE)
+        elif out[-1] == '-':
+            pass
+        else:
+            cache[out] += 1
+            os.system(out + "&")
+            store(cache,CACHE_FILE)
 
-if sys.argv[1] == "update":
-    update()
-elif sys.argv[1] == "run":
-    run()
-
+run()
