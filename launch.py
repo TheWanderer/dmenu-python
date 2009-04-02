@@ -9,11 +9,35 @@ from operator import itemgetter
 CACHE_FILE = os.getenv('HOME')+'/.launch'
 DMENU = "dmenu"
 TERM = "urxvt -hold -e "
+FOLDERS = ["/home/shankar"]
+EXT = {
+        '.txt':'urxvt -e vim',
+        '.sh':'urxvt -e vim',
+        '.py':'urxvt -e vim'
+        }
+FILEBROWSER = "pcmanfm"
 
 
 def create_cache():
     prog_list = commands.getoutput("dmenu_path").split("\n")
-    return dict.fromkeys(prog_list,0)
+    dirlist = []
+
+    for watchdir in FOLDERS:
+         for root, dir , files in os.walk(watchdir):
+             if root.find('/.')  == -1 : 
+                 for name in files:
+                     if not name.startswith('.'):
+                         if os.path.splitext(name)[1] in EXT.keys(): 
+                             dirlist.append(os.path.join(root,name))
+                 for name in dir: 
+                     if not name.startswith('.'):
+                         dirlist.append(os.path.join(root,name))
+
+    dirlist.append("update_dmen")
+    dirlist.sort()
+    
+    return dict.fromkeys(prog_list + dirlist,0)
+    
 
 def store(object,file):
     with open(file, 'w') as f:
@@ -37,7 +61,6 @@ def retrieve(file,ifnotfound):
 def update():
     cache_new  = create_cache()
     cache_old  = retrieve(CACHE_FILE,create_new)
-#    cache_new.update(cache_old)
     for k in cache_old:
         if k in cache_new:
             cache_new[k] = cache_old[k]
@@ -45,7 +68,7 @@ def update():
     store(cache_new,CACHE_FILE)
 
 def dmenu(pgm_list):
-    p = subprocess.Popen([DMENU], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+    p = subprocess.Popen([DMENU,"-l","10"], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
     out = p.communicate("\n".join(pgm_list))[0]
     return out
 
@@ -58,16 +81,25 @@ def run():
     if len(out) > 0 :
         if out == "update_dmen":
             update()
-        elif out[-1] == ';':
+        elif out.endswith(';'):
             out = out[:-1]
             cache[out] += 1
-            os.system(TERM + out + "&")
+            os.system(TERM + out + " &")
             store(cache,CACHE_FILE)
-        elif out[-1] == '-':
-            pass
+        elif out.find('/') != -1:
+            if os.path.isdir(out):
+                print out
+                cache[out] += 1
+                os.system(FILEBROWSER + " " + out + " &")
+                store(cache,CACHE_FILE)
+            else:
+                cache[out] += 1
+                os.system(EXT[os.path.splitext(out)[1]] + " " + out + " &")
+                store(cache,CACHE_FILE)
         else:
             cache[out] += 1
-            os.system(out + "&")
+            os.system(out + " &")
             store(cache,CACHE_FILE)
 
 run()
+
