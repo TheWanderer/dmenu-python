@@ -84,10 +84,10 @@ def run():
             update()
         elif out.endswith(';'):
             out = out[:-1]
-            os.system(TERM + out + " &")
-        elif out.endswith('!'):
-            out = out[:-1]
-            os.system(CD_TERM + out + " && zsh '")
+            if os.path.isdir(out):
+                os.system(CD_TERM + out + " && zsh '")
+            else:
+                os.system(TERM + out + " &")
         elif out.find('/') != -1:
             if os.path.isdir(out):
                 os.system(FILEBROWSER + " " + out + " &")
