@@ -8,7 +8,8 @@ from operator import itemgetter
 
 CACHE_FILE = os.getenv('HOME')+'/.launch'
 DMENU = "dmenu"
-TERM = "urxvt -hold -e "
+TERM = "urxvt -e "
+CD_TERM = "urxvt -e zsh -c 'cd "
 FOLDERS = ["/home/shankar"]
 EXT = {
         '.txt':'urxvt -e vim',
@@ -83,23 +84,26 @@ def run():
             update()
         elif out.endswith(';'):
             out = out[:-1]
-            cache[out] += 1
             os.system(TERM + out + " &")
-            store(cache,CACHE_FILE)
+        elif out.endswith('!'):
+            out = out[:-1]
+            os.system(CD_TERM + out + " && zsh '")
         elif out.find('/') != -1:
             if os.path.isdir(out):
-                print out
-                cache[out] += 1
                 os.system(FILEBROWSER + " " + out + " &")
-                store(cache,CACHE_FILE)
             else:
-                cache[out] += 1
-                os.system(EXT[os.path.splitext(out)[1]] + " " + out + " &")
-                store(cache,CACHE_FILE)
+                (main,ext) = os.path.splitext(out)
+                if ext == '':
+                    os.system(out + " &")
+                else:
+                    os.system(EXT[ext] + " " + out + " &")
         else:
-            cache[out] += 1
             os.system(out + " &")
-            store(cache,CACHE_FILE)
+
+        if not cache.has_key(out):
+            cache[out] = 0
+        cache[out] += 1
+        store(cache,CACHE_FILE)
 
 run()
 
